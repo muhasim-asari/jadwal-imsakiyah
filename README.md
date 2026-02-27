@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+🌙 Jadwal Imsakiyah Ramadan 1447 H (2026)
 
-## Getting Started
+Aplikasi berbasis web modern untuk memantau jadwal Imsakiyah dan waktu sholat selama bulan Ramadan 1447 H (Februari - Maret 2026). Data diambil secara akurat melalui API MyQuran yang bersumber dari Kemenag RI.
 
-First, run the development server:
+✨ Fitur Utama
 
-```bash
+Pencarian Lokasi Pintar: Cari jadwal berdasarkan Kota atau Kabupaten di seluruh Indonesia dengan fitur debouncing untuk performa yang ringan.
+
+Kalender Masehi & Hijriyah: Tampilan kalender mini di sisi kiri yang menyinkronkan tanggal Masehi dengan penanggalan Ramadan.
+
+Jadwal Lengkap 30 Hari: Menampilkan jadwal Imsak, Subuh, Dzuhur, Ashar, Maghrib, dan Isya dari awal hingga akhir Ramadan.
+
+Penanda Hari Ini: Deteksi otomatis tanggal sistem untuk memberikan highlight khusus pada kartu jadwal hari ini.
+
+Penyimpanan Lokal (Persistence): Lokasi terakhir yang dicari akan tersimpan secara otomatis di browser sehingga pengguna tidak perlu mencari ulang saat kembali berkunjung.
+
+Desain Responsif: Antarmuka modern yang nyaman diakses melalui perangkat mobile maupun desktop menggunakan Tailwind CSS.
+
+🚀 Teknologi yang Digunakan
+
+React.js: Library utama untuk membangun antarmuka pengguna.
+
+Next.js: Framework untuk performa dan struktur folder yang rapi.
+
+Tailwind CSS: Untuk styling utilitas yang cepat dan responsif.
+
+Lucide React: Library ikon vektor yang modern dan ringan.
+
+MyQuran API: Sumber data jadwal sholat resmi Kemenag RI.
+
+🛠️ Instalasi
+
+Untuk menjalankan proyek ini secara lokal, ikuti langkah-langkah berikut:
+
+Clone repositori ini
+
+git clone [https://github.com/username/jadwal-imsakiyah-ramadan.git](https://github.com/username/jadwal-imsakiyah-ramadan.git)
+
+
+Masuk ke direktori proyek
+
+cd jadwal-imsakiyah-ramadan
+
+
+Instal dependensi
+
+npm install
+
+
+Jalankan server pengembangan
+
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Buka di browser
+Akses http://localhost:3000 untuk melihat aplikasi.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+📖 Cara Penggunaan
 
-## Learn More
+Saat pertama kali dibuka, aplikasi akan menampilkan jadwal untuk wilayah Jakarta sebagai default.
 
-To learn more about Next.js, take a look at the following resources:
+Klik tombol Pilih Lokasi (ikon Map Pin) di bagian header.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Masukkan nama kota Anda (minimal 3 karakter).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Pilih kota yang sesuai dari hasil pencarian.
 
-## Deploy on Vercel
+Jadwal akan diperbarui secara otomatis dan tersimpan untuk kunjungan berikutnya.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Dibuat dengan ❤️ untuk membantu umat Muslim menjalankan ibadah di bulan suci Ramadan.
