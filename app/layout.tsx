@@ -15,9 +15,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Jadwal Imsakiyah Ramadhan 2026 - Jadwal Sholat dan Imsakiyah Lengkap",
   description: "Jadwal Imsakiyah Ramadhan 2026 lengkap dengan waktu sholat untuk seluruh kota di Indonesia...",
-  // Tambahkan bagian icons di bawah ini
   icons: {
-    icon: "./logo-imsakiyah.png", // Pastikan file ada di folder /public/logo-imsakiyah.png
+    icon: "./logo-imsakiyah.png",
   },
 };
 

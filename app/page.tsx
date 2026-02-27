@@ -97,7 +97,7 @@ export default function App() {
 
         if (startIndex !== -1) {
           // Ambil 30 hari Ramadan + 2 hari perkiraan Idul Fitri (Total 32 baris)
-          const ramadanDays = combinedJadwal.slice(startIndex, startIndex + 32);
+          const ramadanDays = combinedJadwal.slice(startIndex, startIndex + 30);
           setSchedule(ramadanDays);
         }
       }
@@ -183,7 +183,7 @@ export default function App() {
         <div className="absolute -right-20 -bottom-20 text-[18rem] font-black opacity-5 italic select-none text-white">RAMADAN</div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 -mt-10 relative z-20">
+      <main className="max-w-7xl mx-auto -mt-10 relative z-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* KOLOM KIRI: KALENDER & HADITS */}
           <aside className="lg:col-span-4 lg:sticky lg:top-8 space-y-6">
@@ -192,14 +192,14 @@ export default function App() {
                 <button onClick={() => setCalendarMonth(2)} className={`p-1 rounded-full transition-colors ${calendarMonth === 3 ? "hover:bg-slate-100" : "opacity-20 cursor-default"}`}>
                   <ChevronLeft size={16} />
                 </button>
-                <h3 className="font-black text-slate-800 uppercase text-[10px] tracking-widest text-center flex-1">{calendarMonth === 2 ? "Februari" : "Maret"} 2026</h3>
+                <h3 className="font-black text-slate-800 uppercase text-[14px] tracking-widest text-center flex-1">{calendarMonth === 2 ? "Februari" : "Maret"} 2026</h3>
                 <button onClick={() => setCalendarMonth(3)} className={`p-1 rounded-full transition-colors ${calendarMonth === 2 ? "hover:bg-slate-100" : "opacity-20 cursor-default"}`}>
                   <ChevronRight size={16} />
                 </button>
               </div>
               <div className="grid grid-cols-7 gap-1">
                 {["M", "S", "S", "R", "K", "J", "S"].map((day, idx) => (
-                  <div key={`h-${idx}`} className="text-center text-[9px] font-black text-slate-300 py-1 uppercase">
+                  <div key={`h-${idx}`} className="text-center text-[12px] font-black text-slate-300 py-1 uppercase">
                     {day}
                   </div>
                 ))}
@@ -211,17 +211,17 @@ export default function App() {
               {/* KOTAK INFORMASI PENTING */}
               <div className="mt-6 p-4 bg-amber-50 rounded-2xl border border-amber-100 space-y-2">
                 <div className="flex items-center gap-2 text-amber-700">
-                  <Info size={14} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Sidang Isbat</span>
+                  <Info size={18} />
+                  <span className="text-[14px] font-black uppercase tracking-widest">Sidang Isbat</span>
                 </div>
-                <p className="text-[10px] leading-relaxed text-amber-800">Awal Ramadan & Idul Fitri 1447 H (21-22 Mar) menunggu hasil Sidang Isbat Pemerintah RI. Tanggal di bawah ini adalah perkiraan astronomis.</p>
+                <p className="text-[12px] leading-relaxed text-amber-800">Idul Fitri 1447 H (21-22 Mar) menunggu hasil Sidang Isbat Pemerintah RI. Tanggal di bawah ini adalah perkiraan astronomis.</p>
               </div>
 
               {/* KOTAK HADITS */}
               <div className="mt-4 p-5 bg-emerald-50 rounded-[2rem] border border-emerald-100 relative overflow-hidden">
                 <Quote size={30} className="text-emerald-100 absolute -bottom-2 -right-2 transform rotate-12" />
-                <p className="text-[11px] leading-relaxed text-emerald-900 italic font-medium relative z-10">"{HADITS_DATA[calendarMonth === 2 ? 2 : 3].teks}"</p>
-                <p className="mt-2 text-[9px] font-black text-emerald-600/60 uppercase tracking-widest text-right relative z-10">— {HADITS_DATA[calendarMonth === 2 ? 2 : 3].riwayat}</p>
+                <p className="text-[14px] leading-relaxed text-emerald-900 italic font-medium relative z-10">"{HADITS_DATA[calendarMonth === 2 ? 2 : 3].teks}"</p>
+                <p className="mt-2 text-[12px] font-black text-emerald-600/60 uppercase tracking-widest text-right relative z-10">— {HADITS_DATA[calendarMonth === 2 ? 2 : 3].riwayat}</p>
               </div>
             </div>
           </aside>
@@ -314,9 +314,9 @@ function CalendarCell({ item, month }: CalendarCellProps) {
       ${isEidEstimate && !isToday ? "bg-amber-100 border-amber-200 text-amber-900" : ""}
     `}
     >
-      <span className="text-[10px] font-black leading-none">{String(item.date)}</span>
+      <span className="text-[12px] font-black leading-none">{String(item.date)}</span>
       {isRamadan && (
-        <span className={`text-[6px] font-bold mt-0.5 ${isToday ? "text-amber-100" : isEidEstimate ? "text-amber-600" : "text-emerald-500"}`}>
+        <span className={`text-[8px] font-bold mt-0.5 ${isToday ? "text-amber-100" : isEidEstimate ? "text-amber-600" : "text-emerald-500"}`}>
           {String(item.hijri)} {item.label}
         </span>
       )}
@@ -361,12 +361,12 @@ function ScheduleCard({ day, ramadanIdx }: ScheduleCardProps) {
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <TimeBox label="Imsak" time={day.imsak} icon={<Moon size={10} />} activeToday={isToday} isEid={isEid} />
-        <TimeBox label="Subuh" time={day.subuh} icon={<Sunrise size={10} />} activeToday={isToday} isEid={isEid} />
-        <TimeBox label="Dzuhur" time={day.dzuhur} icon={<Sun size={10} />} activeToday={isToday} isEid={isEid} />
-        <TimeBox label="Ashar" time={day.ashar} icon={<Sun size={10} />} activeToday={isToday} isEid={isEid} />
-        <TimeBox label="Maghrib" time={day.maghrib} icon={<Sunset size={10} />} isHighlight activeToday={isToday} isEid={isEid} />
-        <TimeBox label="Isya" time={day.isya} icon={<CloudMoon size={10} />} activeToday={isToday} isEid={isEid} />
+        <TimeBox label="Imsak" time={day.imsak} icon={<Moon size={22} />} activeToday={isToday} isEid={isEid} />
+        <TimeBox label="Subuh" time={day.subuh} icon={<Sunrise size={22} />} activeToday={isToday} isEid={isEid} />
+        <TimeBox label="Dzuhur" time={day.dzuhur} icon={<Sun size={22} />} activeToday={isToday} isEid={isEid} />
+        <TimeBox label="Ashar" time={day.ashar} icon={<Sun size={22} />} activeToday={isToday} isEid={isEid} />
+        <TimeBox label="Maghrib" time={day.maghrib} icon={<Sunset size={22} />} isHighlight activeToday={isToday} isEid={isEid} />
+        <TimeBox label="Isya" time={day.isya} icon={<CloudMoon size={22} />} activeToday={isToday} isEid={isEid} />
       </div>
     </div>
   );
