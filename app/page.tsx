@@ -162,7 +162,7 @@ export default function App() {
   }, [calendarMonth]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20 selection:bg-amber-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-10 selection:bg-amber-100">
       {/* HEADER */}
       <header className="bg-emerald-900 text-white p-8 md:p-14 shadow-xl relative overflow-hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center relative z-10 gap-6 text-center md:text-left">
@@ -177,13 +177,13 @@ export default function App() {
           </div>
           <div className="bg-black/20 px-8 py-5 rounded-[2.5rem] border border-white/5 backdrop-blur-md">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-1 text-emerald-200 text-center">Februari - Maret 2026</p>
-            <p className="text-xl font-bold tracking-tight text-white text-center leading-tight">Jadwal Ramadan & Perkiraan Idul Fitri</p>
+            <p className="text-xl font-bold tracking-tight text-white text-center leading-tight">Jadwal Ramadan 1447 H</p>
           </div>
         </div>
         <div className="absolute -right-20 -bottom-20 text-[18rem] font-black opacity-5 italic select-none text-white">RAMADAN</div>
       </header>
 
-      <main className="max-w-7xl mx-auto -mt-10 relative z-20">
+      <main className="max-w-7xl mx-auto px-4 lg:px-0 -mt-4 lg:-mt-8 relative z-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* KOLOM KIRI: KALENDER & HADITS */}
           <aside className="lg:col-span-4 lg:sticky lg:top-8 space-y-6">
@@ -214,7 +214,7 @@ export default function App() {
                   <Info size={18} />
                   <span className="text-[14px] font-black uppercase tracking-widest">Sidang Isbat</span>
                 </div>
-                <p className="text-[12px] leading-relaxed text-amber-800">Idul Fitri 1447 H (21-22 Mar) menunggu hasil Sidang Isbat Pemerintah RI. Tanggal di bawah ini adalah perkiraan astronomis.</p>
+                <p className="text-[12px] leading-relaxed text-amber-800">Idul Fitri 1447 H (21-22 Mar) menunggu hasil Sidang Isbat Pemerintah RI.</p>
               </div>
 
               {/* KOTAK HADITS */}
@@ -243,6 +243,19 @@ export default function App() {
           </section>
         </div>
       </main>
+
+      {/* FOOTER */}
+      <footer className="max-w-7xl mx-auto mt-12 pb-3 border-t border-slate-200">
+        <div className="pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+          <div className="space-y-1">
+            <p className="text-[14px] font-black uppercase tracking-widest text-slate-400">Sumber Data API</p>
+            <p className="text-[14px] font-medium text-slate-600">
+              Data jadwal sholat bersumber dari <span className="font-bold text-emerald-700">API MyQuran</span> yang merujuk pada data resmi <span className="font-bold text-emerald-700">Kemenag RI</span>.
+            </p>
+          </div>
+          <p className="text-[14px] font-bold text-slate-400 uppercase tracking-widest">Imsakiyah &copy; {CONFIG.YEAR} / 1447 H</p>
+        </div>
+      </footer>
 
       {/* MODAL SEARCH */}
       {showSearch && (
@@ -278,7 +291,7 @@ export default function App() {
                     setSearchResults([]);
                     setSearchQuery("");
                   }}
-                  className="w-full p-4 text-left hover:bg-emerald-50 rounded-2xl font-bold uppercase text-[10px] tracking-widest border border-transparent hover:border-emerald-100 transition-all flex justify-between items-center group"
+                  className="w-full p-4 text-left hover:bg-emerald-50 rounded-2xl font-bold uppercase text-[12px] tracking-widest border border-transparent hover:border-emerald-100 transition-all flex justify-between items-center group"
                 >
                   <span className="text-slate-700 group-hover:text-emerald-700">{r.lokasi}</span>
                   <ChevronRight size={14} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
