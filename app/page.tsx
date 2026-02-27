@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { 
   Moon, MapPin, Calendar as CalendarIcon, Clock, 
-  ChevronRight, ChevronLeft, Sunset, Sunrise, Search, X, Loader2, Sun, CloudMoon, Quote, Info, Download, Bell, BellOff, LayoutGrid, CalendarDays, ChevronDown, ChevronUp 
+  ChevronRight, ChevronLeft, Sunset, Sunrise, Search, X, Loader2, Sun, CloudMoon, Quote, Info, Download, Bell, BellOff, LayoutGrid, CalendarDays, ChevronDown, ChevronUp, CheckCircle, AlertCircle
 } from "lucide-react";
 
 // --- INTERFACES ---
@@ -47,6 +47,12 @@ interface CalendarItem {
   label?: string;
 }
 
+interface ScheduledNotification {
+  prayerName: string;
+  scheduledTime: Date;
+  notified: boolean;
+}
+
 // --- KONFIGURASI 2026 ---
 const CONFIG: Config = {
   YEAR: 2026,
@@ -75,25 +81,40 @@ export default function App() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [calendarMonth, setCalendarMonth] = useState<number>(2);
-  const [activeTab, setActiveTab] = useState<'jadwal' | 'kalender'>('jadwal'); // State Menu PWA
+  const [activeTab, setActiveTab] = useState<'jadwal' | 'kalender'>('jadwal');
+  const [notificationStatus, setNotificationStatus] = useState<'default' | 'granted' | 'denied'>('default');
+  const [notificationError, setNotificationError] = useState<string>("");
   
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<string>("default");
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const lastNotifiedTime = useRef("");
+  const [isServiceWorkerReady, setIsServiceWorkerReady] = useState<boolean>(false);
+  const scheduledNotificationsRef = useRef<ScheduledNotification[]>([]);
+  const lastNotifiedPrayer = useRef<string>("");
 
   // 1. Ambil Data Jadwal Gabungan (Februari & Maret)
   const fetchData = useCallback(async (cityId: string) => {
     setLoading(true);
     try {
-      const resFeb = await fetch(`https://api.myquran.com/v2/sholat/jadwal/${cityId}/2026/02`);
-      const dataFeb = await resFeb.json();
-      const resMar = await fetch(`https://api.myquran.com/v2/sholat/jadwal/${cityId}/2026/03`);
-      const dataMar = await resMar.json();
-
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
+      
+      // Fetch current month and next month dynamically
+      const monthsToFetch = [];
+      for (let m = currentMonth; m <= currentMonth + 1 && m <= 12; m++) {
+        monthsToFetch.push(m);
+      }
+      
       let combinedJadwal: ScheduleDay[] = [];
-      if (dataFeb.status && dataFeb.data.jadwal) combinedJadwal = [...dataFeb.data.jadwal];
-      if (dataMar.status && dataMar.data.jadwal) combinedJadwal = [...combinedJadwal, ...dataMar.data.jadwal];
+      
+      for (const month of monthsToFetch) {
+        const monthStr = month.toString().padStart(2, '0');
+        const res = await fetch(`https://api.myquran.com/v2/sholat/jadwal/${cityId}/${currentYear}/${monthStr}`);
+        const data = await res.json();
+        if (data.status && data.data.jadwal) {
+          combinedJadwal = [...combinedJadwal, ...data.data.jadwal];
+        }
+      }
 
       if (combinedJadwal.length > 0) {
         const startIndex = combinedJadwal.findIndex((day) => {
@@ -105,6 +126,9 @@ export default function App() {
         if (startIndex !== -1) {
           // Ambil 32 hari (30 Ramadan + 2 Perkiraan Syawal)
           setSchedule(combinedJadwal.slice(startIndex, startIndex + 32));
+        } else {
+          // If Ramadan not found, use all available data
+          setSchedule(combinedJadwal);
         }
       }
     } catch (err) {
@@ -114,29 +138,88 @@ export default function App() {
     }
   }, []);
 
-  // 2. Inisialisasi & PWA/Notification Setup
+  // 2. Register Service Worker
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js")
+        .then((registration) => {
+          console.log("Service Worker registered:", registration);
+          setIsServiceWorkerReady(true);
+        })
+        .catch((error) => {
+          console.error("Service Worker registration failed:", error);
+        });
+    }
+  }, []);
+
+  // 3. Inisialisasi & PWA/Notification Setup
   useEffect(() => {
     const saved = localStorage.getItem("selectedLocation");
     if (saved) setInfo(JSON.parse(saved));
     fetchData(saved ? JSON.parse(saved).id : info.id);
 
-    if ("Notification" in window) setNotificationPermission(Notification.permission);
+    if ("Notification" in window) {
+      setNotificationPermission(Notification.permission);
+      setNotificationStatus(Notification.permission as 'default' | 'granted' | 'denied');
+    }
 
     window.addEventListener("beforeinstallprompt", (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
     });
-  }, [fetchData]);
 
-  // 3. Notifikasi Sholat Real-time
+    return () => {
+      // Cleanup scheduled notifications
+      scheduledNotificationsRef.current = [];
+    };
+  }, [fetchData, info.id]);
+
+  // 4. Function to show notification (works even when tab is in background)
+  const showNotification = useCallback(async (prayerName: string, location: string) => {
+    if (lastNotifiedPrayer.current === prayerName) return;
+    
+    const title = `Waktunya ${prayerName}!`;
+    const body = `Sudah masuk waktu ${prayerName} untuk wilayah ${location}.`;
+    const icon = "/logo-imsakiyah.png";
+
+    // Try Service Worker first (works in background)
+    if (isServiceWorkerReady && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: "SHOW_NOTIFICATION",
+        title,
+        body,
+        icon,
+      });
+    }
+
+    // Also try regular Notification API as fallback
+    if (notificationPermission === "granted") {
+      try {
+        new Notification(title, {
+          body,
+          icon,
+          badge: icon,
+          tag: `prayer-${prayerName}`,
+          requireInteraction: true,
+        } as NotificationOptions);
+      } catch (err) {
+        console.error("Notification error:", err);
+      }
+    }
+
+    lastNotifiedPrayer.current = prayerName;
+  }, [isServiceWorkerReady, notificationPermission]);
+
+  // 5. Notifikasi Sholat - Improved with exact time scheduling
   useEffect(() => {
-    const checkInterval = setInterval(() => {
-      if (schedule.length === 0 || notificationPermission !== "granted") return;
+    if (schedule.length === 0) return;
 
+    const checkAndNotify = () => {
       const now = new Date();
-      const currentTime = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
-      if (lastNotifiedTime.current === currentTime) return;
-
+      const currentHours = now.getHours();
+      const currentMinutes = now.getMinutes();
+      const currentTimeInMinutes = currentHours * 60 + currentMinutes;
+      
       const d = now.getDate();
       const m = now.getMonth() + 1;
       const todayData = schedule.find((day) => {
@@ -145,27 +228,67 @@ export default function App() {
         return sd === d && sm === m;
       });
 
-      if (todayData) {
-        const prayerTimes = [
-          { label: "Imsak", time: todayData.imsak },
-          { label: "Subuh", time: todayData.subuh },
-          { label: "Dzuhur", time: todayData.dzuhur },
-          { label: "Ashar", time: todayData.ashar },
-          { label: "Maghrib", time: todayData.maghrib },
-          { label: "Isya", time: todayData.isya },
-        ];
-        const match = prayerTimes.find((p) => p.time === currentTime);
-        if (match) {
-          new Notification(`Waktunya ${match.label}!`, {
-            body: `Sudah masuk waktu ${match.label} untuk wilayah ${info.lokasi}.`,
-            icon: "https://jadwal-imsakiyah-dusky.vercel.app/logo-imsakiyah-192.png",
-          });
-          lastNotifiedTime.current = currentTime;
+      if (!todayData) return;
+
+      // Parse prayer times and check if current time matches
+      const prayerTimes = [
+        { label: "Imsak", time: todayData.imsak },
+        { label: "Subuh", time: todayData.subuh },
+        { label: "Dhuha", time: todayData.dhuha },
+        { label: "Dzuhur", time: todayData.dzuhur },
+        { label: "Ashar", time: todayData.ashar },
+        { label: "Maghrib", time: todayData.maghrib },
+        { label: "Isya", time: todayData.isya },
+      ];
+
+      for (const prayer of prayerTimes) {
+        if (!prayer.time) continue;
+        
+        const [ph, pm] = prayer.time.split(":").map(Number);
+        const prayerTimeInMinutes = ph * 60 + pm;
+        
+        // Check if current time is within 1 minute of prayer time
+        const diff = Math.abs(currentTimeInMinutes - prayerTimeInMinutes);
+        
+        if (diff === 0 || (diff === 1 && currentTimeInMinutes > prayerTimeInMinutes)) {
+          if (notificationPermission === "granted") {
+            showNotification(prayer.label, info.lokasi);
+          }
         }
       }
-    }, 30000);
+    };
+
+    // Check immediately
+    checkAndNotify();
+
+    // Then check every 10 seconds (more frequent for better accuracy)
+    const checkInterval = setInterval(checkAndNotify, 10000);
+    
     return () => clearInterval(checkInterval);
-  }, [schedule, notificationPermission, info.lokasi]);
+  }, [schedule, notificationPermission, info.lokasi, showNotification]);
+
+  // Handle notification permission request
+  const handleNotificationRequest = async () => {
+    setNotificationError("");
+    
+    if (!("Notification" in window)) {
+      setNotificationError("Browser tidak mendukung notifikasi");
+      return;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      setNotificationStatus(permission as 'default' | 'granted' | 'denied');
+      
+      if (permission === "denied") {
+        setNotificationError("Notifikasi diblokir. Silakan aktifkan di pengaturan browser.");
+      }
+    } catch (err) {
+      console.error("Error requesting notification permission:", err);
+      setNotificationError("Gagal meminta izin notifikasi");
+    }
+  };
 
   const handleSearch = (q: string) => {
     setSearchQuery(q);
@@ -220,22 +343,56 @@ export default function App() {
                 <MapPin size={18} className="text-emerald-400" />
                 <span className="uppercase tracking-widest text-sm">{info.lokasi}</span>
               </button>
+              
+              {/* FIXED: Notification Button with proper icon and status */}
               <button
-                onClick={async () => {
-                  const p = await Notification.requestPermission();
-                  setNotificationPermission(p);
-                }}
-                className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl transition-all font-bold shadow-lg ${notificationPermission === "granted" ? "bg-amber-600 border-amber-500" : "bg-white/20 border-white/10"}`}
+                onClick={handleNotificationRequest}
+                className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl transition-all font-bold shadow-lg ${
+                  notificationPermission === "granted" 
+                    ? "bg-amber-600 border-amber-500" 
+                    : notificationPermission === "denied"
+                    ? "bg-red-500/80 border-red-500"
+                    : "bg-white/20 border-white/10"
+                }`}
               >
-                {notificationPermission === "granted" ? <Bell size={18} /> : <BellOff size={18} />}
-                <span className="uppercase tracking-widest text-sm">{notificationPermission === "granted" ? "Notifikasi Aktif" : "Aktifkan Bel"}</span>
+                {notificationPermission === "granted" ? (
+                  <Bell size={18} className="animate-bounce" />
+                ) : notificationPermission === "denied" ? (
+                  <AlertCircle size={18} />
+                ) : (
+                  <BellOff size={18} />
+                )}
+                <span className="uppercase tracking-widest text-sm">
+                  {notificationPermission === "granted" 
+                    ? "Notifikasi Aktif" 
+                    : notificationPermission === "denied"
+                    ? "Notifikasi Diblokir"
+                    : "Aktifkan Bel"}
+                </span>
               </button>
+              
               {deferredPrompt && (
                 <button onClick={() => { deferredPrompt.prompt(); setDeferredPrompt(null); }} className="inline-flex items-center gap-2 bg-amber-500 text-emerald-950 px-6 py-3 rounded-2xl font-bold shadow-lg">
                   <Download size={18} /> <span className="uppercase tracking-widest text-xs">Pasang App</span>
                 </button>
               )}
             </div>
+            
+            {/* Notification Error Message */}
+            {notificationError && (
+              <div className="flex items-center gap-2 bg-red-500/20 border border-red-500/30 px-4 py-2 rounded-xl">
+                <AlertCircle size={16} className="text-red-400" />
+                <span className="text-xs text-red-300">{notificationError}</span>
+              </div>
+            )}
+            
+            {/* Service Worker Status */}
+            {isServiceWorkerReady && notificationPermission === "granted" && (
+              <div className="flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/30 px-4 py-2 rounded-xl">
+                <CheckCircle size={16} className="text-emerald-400" />
+                <span className="text-xs text-emerald-300">Notifikasi latar belakang aktif</span>
+              </div>
+            )}
           </div>
           <div className="bg-black/20 px-8 py-5 rounded-[2.5rem] border border-white/5 backdrop-blur-md order-1 md:order-2">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-1 text-emerald-200 text-center">Februari - Maret 2026</p>
@@ -340,6 +497,8 @@ export default function App() {
                     setShowSearch(false);
                     setSearchResults([]);
                     setSearchQuery("");
+                    // Reset notification state when location changes
+                    lastNotifiedPrayer.current = "";
                   }}
                   className="w-full p-4 text-left hover:bg-emerald-50 rounded-2xl font-bold uppercase text-[12px] tracking-widest border border-transparent hover:border-emerald-100 transition-all flex justify-between items-center group"
                 >
@@ -453,6 +612,7 @@ function ScheduleCard({ day, ramadanIdx }: { day: ScheduleDay; ramadanIdx: numbe
         <div className="grid grid-cols-3 gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
           <TimeBox label="Imsak" time={day.imsak} icon={<Moon size={22} />} activeToday={isToday} isEid={isEid} />
           <TimeBox label="Subuh" time={day.subuh} icon={<Sunrise size={22} />} activeToday={isToday} isEid={isEid} />
+          <TimeBox label="Dhuha" time={day.dhuha} icon={<Sun size={22} />} activeToday={isToday} isEid={isEid} />
           <TimeBox label="Dzuhur" time={day.dzuhur} icon={<Sun size={22} />} activeToday={isToday} isEid={isEid} />
           <TimeBox label="Ashar" time={day.ashar} icon={<Sun size={22} />} activeToday={isToday} isEid={isEid} />
           <TimeBox label="Maghrib" time={day.maghrib} icon={<Sunset size={22} />} isHighlight activeToday={isToday} isEid={isEid} />
@@ -478,11 +638,23 @@ function TimeBox({ label, time, icon, isHighlight = false, activeToday = false, 
   const eidTodayColor = "bg-amber-50 border-amber-200 text-amber-900";
   const finalStyle = isHighlight && !activeToday ? highlightColor : isHighlight && activeToday ? "bg-amber-600 border-amber-700 text-white shadow-lg" : activeToday ? activeTodayColor : isEid ? eidTodayColor : "bg-slate-50 border-slate-100 text-slate-600";
 
+  // Handle missing time
+  if (!time) {
+    return (
+      <div className="p-3 rounded-2xl border bg-slate-50 border-slate-100 text-slate-300 flex flex-col items-center text-center opacity-50">
+        <div className="mb-1 opacity-70">{icon}</div>
+        <p className="text-[7px] font-black uppercase tracking-widest mb-0.5 opacity-80">{label}</p>
+        <p className="text-xs font-black tracking-tighter">-</p>
+      </div>
+    );
+  }
+
   return (
     <div className={`p-3 rounded-2xl border transition-all flex flex-col items-center text-center ${finalStyle}`}>
       <div className={`mb-1 opacity-70`}>{icon}</div>
       <p className={`text-[7px] font-black uppercase tracking-widest mb-0.5 opacity-80`}>{label}</p>
-      <p className={`text-xs font-black tracking-tighter`}>{time}</p>
+      <p className="text-xs font-black tracking-tighter">{time}</p>
     </div>
   );
 }
+
