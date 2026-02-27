@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Moon, MapPin, Calendar as CalendarIcon, Clock, ChevronRight, ChevronLeft, Sunset, Sunrise, Search, X, Loader2, Sun, CloudMoon, Quote, Info } from "lucide-react";
+import { Moon, MapPin, Calendar as CalendarIcon, Clock, ChevronRight, ChevronLeft, Sunset, Sunrise, Search, X, Loader2, Sun, CloudMoon, Quote, Info, Download, Bell, BellOff } from "lucide-react";
 
 // --- INTERFACES ---
 interface Config {
@@ -74,6 +74,26 @@ export default function App() {
   const [calendarMonth, setCalendarMonth] = useState<number>(2);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [notificationPermission, setNotificationPermission] = useState<string>("default");
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  const lastNotifiedTime = useRef("");
+
+  // 1. Fetch Data dengan Retry Logic
+  const fetchWithRetry = async (url: string, retries = 5, delay = 1000): Promise<any> => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Gagal mengambil data");
+      return await res.json();
+    } catch (err) {
+      if (retries > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return fetchWithRetry(url, retries - 1, delay * 2);
+      }
+      throw err;
+    }
+  };
+
   // 1. Ambil Data Jadwal Gabungan (Februari & Maret)
   const fetchData = useCallback(async (cityId: string) => {
     setLoading(true);
@@ -108,13 +128,63 @@ export default function App() {
     }
   }, []);
 
-  // 2. Inisialisasi
+  // 2. Inisialisasi & PWA/Notification Setup
   useEffect(() => {
     const saved = localStorage.getItem("selectedLocation");
-    const loc: LocationInfo = saved ? JSON.parse(saved) : info;
-    if (saved) setInfo(loc);
-    fetchData(loc.id);
+    if (saved) setInfo(JSON.parse(saved));
+    fetchData(saved ? JSON.parse(saved).id : info.id);
+
+    if ("Notification" in window) setNotificationPermission(Notification.permission);
+
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
   }, [fetchData]);
+
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      if (schedule.length === 0 || notificationPermission !== "granted") return;
+
+      const now = new Date();
+      const currentTime = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+      if (lastNotifiedTime.current === currentTime) return;
+
+      const d = now.getDate();
+      const m = now.getMonth() + 1;
+
+      const todayData = schedule.find((day) => {
+        const datePart = day.tanggal.includes(", ") ? day.tanggal.split(", ")[1] : day.tanggal;
+        const [sd, sm] = datePart.split("/").map(Number);
+        return sd === d && sm === m;
+      });
+
+      if (todayData) {
+        const prayerTimes = [
+          { label: "Imsak", time: todayData.imsak },
+          { label: "Subuh", time: todayData.subuh },
+          { label: "Dzuhur", time: todayData.dzuhur },
+          { label: "Ashar", time: todayData.ashar },
+          { label: "Maghrib", time: todayData.maghrib },
+          { label: "Isya", time: todayData.isya },
+        ];
+
+        const match = prayerTimes.find((p) => p.time === currentTime);
+        if (match) {
+          new Notification(`Waktunya ${match.label}!`, {
+            body: `Sudah masuk waktu ${match.label} untuk wilayah ${info.lokasi}.`,
+            icon: "https://jadwal-imsakiyah-dusky.vercel.app/logo-imsakiyah-192.png",
+          });
+          lastNotifiedTime.current = currentTime;
+        }
+      }
+    }, 30000);
+    return () => clearInterval(checkInterval);
+  }, [schedule, notificationPermission, info.lokasi]);
 
   // 3. Handler Search
   const handleSearch = (q: string) => {
@@ -170,10 +240,34 @@ export default function App() {
             <h1 className="text-3xl md:text-5xl font-black flex items-center gap-3 justify-center md:justify-start">
               <Moon className="text-yellow-400 fill-yellow-400" /> Imsakiyah 1447 H
             </h1>
-            <button onClick={() => setShowSearch(true)} className="inline-flex items-center gap-3 bg-white/10 hover:bg-white/20 px-6 py-3 rounded-2xl border border-white/10 backdrop-blur-md transition-all group font-bold">
-              <MapPin size={18} className="text-emerald-400" />
-              <span className="uppercase tracking-widest text-sm">{info.lokasi}</span>
-            </button>
+            <div className="flex flex-wrap justify-center md:justify-start gap-3">
+              <button onClick={() => setShowSearch(true)} className="inline-flex items-center gap-3 bg-white/10 hover:bg-white/20 px-6 py-3 rounded-2xl border border-white/10 backdrop-blur-md transition-all group font-bold">
+                <MapPin size={18} className="text-emerald-400" />
+                <span className="uppercase tracking-widest text-sm">{info.lokasi}</span>
+              </button>
+              <button
+                onClick={async () => {
+                  const p = await Notification.requestPermission();
+                  setNotificationPermission(p);
+                }}
+                className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl transition-all font-bold shadow-lg ${notificationPermission === "granted" ? "bg-emerald-600" : "bg-white/20"}`}
+              >
+                {notificationPermission === "granted" ? <Bell size={18} /> : <BellOff size={18} />}
+                <span className="uppercase tracking-widest text-sm">{notificationPermission === "granted" ? "Notifikasi On" : "Aktifkan Bel"}</span>
+              </button>
+
+              {deferredPrompt && (
+                <button
+                  onClick={() => {
+                    deferredPrompt.prompt();
+                    setDeferredPrompt(null);
+                  }}
+                  className="inline-flex items-center gap-2 bg-amber-500 text-emerald-950 px-6 py-3 rounded-2xl font-bold shadow-lg"
+                >
+                  <Download size={18} /> <span className="uppercase tracking-widest text-xs">Instal</span>
+                </button>
+              )}
+            </div>
           </div>
           <div className="bg-black/20 px-8 py-5 rounded-[2.5rem] border border-white/5 backdrop-blur-md">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-1 text-emerald-200 text-center">Februari - Maret 2026</p>

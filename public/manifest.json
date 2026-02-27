@@ -1,0 +1,23 @@
+{
+  "name": "Imsakiyah Ramadan 1447H",
+  "short_name": "Imsakiyah",
+  "description": "Jadwal Imsakiyah & Sholat Ramadan 2026",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#064e3b",
+  "theme_color": "#064e3b",
+  "icons": [
+    {
+      "src": "https://jadwal-imsakiyah-dusky.vercel.app/logo-imsakiyah-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://jadwal-imsakiyah-dusky.vercel.app/logo-imsakiyah.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -27,6 +27,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#064e3b" />
+        <link
+          rel="apple-touch-icon"
+          href="https://jadwal-imsakiyah-dusky.vercel.app/logo-imsakiyah-192.png"
+        />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
     </html>
   );
